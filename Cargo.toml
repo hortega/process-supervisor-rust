@@ -1,0 +1,11 @@
+[package]
+name = "process-supervisor"
+version = "0.1.0"
+authors = ["Hector Ortega <hector.oj@gmail.com>"]
+
+[dependencies]
+rocket = "0.2.9"
+rocket_codegen = "0.2.9"
+rocket_contrib = "0.2.9"
+serde_derive = "0.9.15"
+serde = "0.9.15"
