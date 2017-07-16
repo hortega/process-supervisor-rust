@@ -1,13 +1,20 @@
 use std::collections::HashMap;
+use std::process::Child;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Command {
+pub struct CommandMetadata {
     pub command: Vec<String>,
     pub cwd: String,
     pub state: String
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
+pub struct Command {
+    pub command_metadata: CommandMetadata,
+    pub process: Option<Child>
+}
+
+#[derive(Debug)]
 pub struct CommandRepository {
     commands: HashMap<String, Command>
 }
@@ -19,16 +26,31 @@ impl CommandRepository {
         }
     }
 
-    pub fn store(&mut self, command: Command) -> String {
-        let command_name = match command.command.first() {
-            Some(cmd) => cmd.to_string(),
+    pub fn lookup(&mut self, command_name: String) -> Option<&mut Command> {
+        self.commands.get_mut(&command_name)
+    }
+
+    pub fn store(&mut self, command_metadata: CommandMetadata) -> String {
+        let command_name = match command_metadata.command.first() {
+            Some(cmd) => cmd.clone().to_string(),
             None => return "".to_string()
         };
-        self.commands.insert(command_name.to_string(), command);
+        if let Some(command) = self.lookup(command_name.clone()) {
+            command.command_metadata = command_metadata;
+            return command_name;
+        }
+
+        let command = Command { command_metadata: command_metadata, process: None};
+        self.commands.insert(command_name.to_string().clone(), command);
         command_name
     }
 
-    pub fn lookup(&self, command_name: &str) -> Option<&Command> {
-        self.commands.get(command_name)
+    pub fn retrieve(&self) -> Vec<CommandMetadata> {
+        let mut res = vec!();
+        for command in self.commands.values() {
+            res.push(command.command_metadata.clone());
+        }
+        res
     }
+
 }

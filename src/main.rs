@@ -7,12 +7,14 @@ extern crate serde_derive;
 extern crate rocket_contrib;
 #[macro_use]
 extern crate serde_json;
+extern crate futures;
+
 
 #[cfg(test)]
 mod tests;
 mod command_repository;
 
-use command_repository::{Command, CommandRepository};
+use command_repository::{CommandMetadata, CommandRepository};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use rocket::State;
@@ -25,18 +27,19 @@ pub fn ping() -> &'static str {
 }
 
 // TODO: Accept an array of commands
-#[put("/commands", format = "application/json", data = "<command>")]
-pub fn upsert_command(repo: State<Arc<RwLock<CommandRepository>>>, command: Json<Command>) -> Result<String, String> {
+#[put("/commands", format = "application/json", data = "<command_metadata>")]
+pub fn upsert_command(repo: State<Arc<RwLock<CommandRepository>>>, command_metadata: Json<CommandMetadata>) -> Result<String, String> {
     let mut repo = repo.write().unwrap();
-    let command_cloned = command.into_inner().clone();
+    let command_cloned = command_metadata.into_inner().clone();
     let id = repo.store(command_cloned);
     Ok(id.to_string())
 }
 
 #[get("/commands")]
 pub fn read_commands(repo: State<Arc<RwLock<CommandRepository>>>) -> Json<Value> {
-    let res = &*repo.read().unwrap();
-    Json(json!(res))
+    let read = &*repo.read().unwrap().retrieve();
+
+    Json(json!(read))
 }
 
 fn rocket(command_repository: Arc<RwLock<CommandRepository>>) -> rocket::Rocket {
@@ -54,6 +57,7 @@ fn main() {
     let command_repository_clone = command_repository.clone();
     thread::spawn(move || {
         loop {
+
             thread::sleep(Duration::from_millis(4000))
         }
     });

@@ -18,7 +18,7 @@ fn test_commands_get_put() {
     // assert there are no commands
     let mut response = client.get("/commands").dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string(), Some("{\"commands\":{}}".into()));
+    assert_eq!(response.body_string(), Some("[]".into()));
 
     // send a command
     let mut response = client.put("/commands")
