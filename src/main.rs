@@ -36,9 +36,12 @@ pub fn read_commands(repo: State<RwLock<CommandRepository>>) -> Json<Value> {
     Json(json!(res))
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .manage(RwLock::new(CommandRepository::new()))
         .mount("/", routes![ping, upsert_command, read_commands])
-        .launch();
+}
+
+fn main() {
+    rocket().launch();
 }
