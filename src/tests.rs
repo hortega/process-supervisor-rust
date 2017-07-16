@@ -1,10 +1,11 @@
-use super::rocket;
+use super::rocket_with_repository;
 use rocket::local::Client;
 use rocket::http::{Status, ContentType};
 
+
 #[test]
 fn test_ping() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
+    let client = Client::new(rocket_with_repository()).expect("valid rocket instance");
     let mut response = client.get("/ping").dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.body_string(), Some("pong".into()));
@@ -12,7 +13,7 @@ fn test_ping() {
 
 #[test]
 fn test_commands_get_put() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
+    let client = Client::new(rocket_with_repository()).expect("valid rocket instance");
 
     // assert there are no commands
     let mut response = client.get("/commands").dispatch();

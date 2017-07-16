@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Command {
     pub command: Vec<String>,
     pub cwd: String,
     pub state: String
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CommandRepository {
     commands: HashMap<String, Command>
 }
