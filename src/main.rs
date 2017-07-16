@@ -2,31 +2,43 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
+#[macro_use]
+extern crate serde_derive;
 extern crate rocket_contrib;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_json;
 
-use rocket_contrib::JSON;
+#[cfg(test)]
+mod tests;
+mod command_repository;
 
-
-#[derive(Serialize, Deserialize)]
-struct CommandRequest {
-    command: Vec<String>,
-    cwd: String,
-    state: String
-}
+use command_repository::{Command, CommandRepository};
+use std::sync::RwLock;
+use rocket::State;
+use rocket_contrib::{Json, Value};
 
 #[get("/ping")]
-fn ping() -> &'static str {
+pub fn ping() -> &'static str {
     "pong"
 }
 
-#[put("/commands", format = "application/json", data = "<command_request>")]
-fn upsert_command(command_request: JSON<CommandRequest>) -> JSON<CommandRequest> {
-     command_request
+#[put("/commands", format = "application/json", data = "<command>")]
+pub fn upsert_command(repo: State<RwLock<CommandRepository>>, command: Json<Command>) -> Result<String, String> {
+    let mut repo = repo.write().unwrap();
+    let command_cloned = command.into_inner().clone();
+    let id = repo.store(command_cloned);
+    Ok(id.to_string())
+}
+
+#[get("/commands")]
+pub fn read_commands(repo: State<RwLock<CommandRepository>>) -> Json<Value> {
+    let res = &*repo.read().unwrap();
+    Json(json!(res))
 }
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![ping, upsert_command])
+        .manage(RwLock::new(CommandRepository::new()))
+        .mount("/", routes![ping, upsert_command, read_commands])
         .launch();
 }
