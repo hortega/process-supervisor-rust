@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::process::Child;
+use std::hash::{Hash, Hasher};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CommandMetadata {
@@ -10,24 +11,34 @@ pub struct CommandMetadata {
 
 #[derive(Debug)]
 pub struct Command {
+    pub command_name: String,
     pub command_metadata: CommandMetadata,
     pub process: Option<Child>
 }
 
+impl Hash for Command {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.command_name.hash(state);
+    }
+}
+
+impl PartialEq for Command {
+    fn eq(&self, other: &Command) -> bool {
+        self.command_name == other.command_name
+    }
+}
+impl Eq for Command {}
+
 #[derive(Debug)]
 pub struct CommandRepository {
-    commands: HashMap<String, Command>
+    pub commands: HashSet<Command>
 }
 
 impl CommandRepository {
     pub fn new() -> CommandRepository {
         CommandRepository {
-            commands: HashMap::new(),
+            commands: HashSet::new(),
         }
-    }
-
-    pub fn lookup(&mut self, command_name: String) -> Option<&mut Command> {
-        self.commands.get_mut(&command_name)
     }
 
     pub fn store(&mut self, command_metadata: CommandMetadata) -> String {
@@ -35,22 +46,51 @@ impl CommandRepository {
             Some(cmd) => cmd.clone().to_string(),
             None => return "".to_string()
         };
-        if let Some(command) = self.lookup(command_name.clone()) {
-            command.command_metadata = command_metadata;
-            return command_name;
+        println!("/// metadata {:?}", command_metadata);
+        let mut command = Command {
+            command_name: command_name.clone(),
+            command_metadata: command_metadata,
+            process: None};
+        println!("/// metadata {:?}", command);
+        if let Some(stored_command) = self.commands.take(&command) {
+            command.process = stored_command.process;
         }
 
-        let command = Command { command_metadata: command_metadata, process: None};
-        self.commands.insert(command_name.to_string().clone(), command);
+        self.commands.insert(command);
         command_name
     }
 
-    pub fn retrieve(&self) -> Vec<CommandMetadata> {
+    pub fn read_metadata(&self) -> Vec<CommandMetadata> {
         let mut res = vec!();
-        for command in self.commands.values() {
+        for command in self.commands.iter() {
             res.push(command.command_metadata.clone());
         }
         res
     }
 
+    pub fn read_command_names(&self) -> Vec<String> {
+        let mut res = vec!();
+        for command in self.commands.iter() {
+            res.push(command.command_name.clone());
+        }
+        res
+    }
+
+    pub fn take_from_name(&mut self, command_name: &String) -> Option<Command> {
+        let command = Command {
+            command_name: command_name.clone(),
+            command_metadata: CommandMetadata {
+                command: vec!(), cwd: "".to_string(), state:"".to_string()
+            },
+            process: None};
+        self.commands.take(&command)
+    }
+
+    pub fn build_fully_qualified_command(command_name: &String, command_metadata: &CommandMetadata) -> String {
+        format!("{}/{}", command_metadata.cwd.clone(), command_name.clone().to_string())
+    }
+
+    pub fn get_arguments(command_metadata: &CommandMetadata) -> Vec<String> {
+        command_metadata.command[1..].to_vec()
+    }
 }
